@@ -17,18 +17,23 @@ export async function POST(req: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
+    console.log("[POST] Stripe webhook event:", event); // Log Stripe webhook event
   } catch (error: any) {
+    console.log("[POST] Webhook Error:", error.message); // Log webhook error
     return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 })
   }
 
   const session = event.data.object as Stripe.Checkout.Session
+  console.log("[POST] Stripe webhook session:", session); // Log Stripe webhook session
 
   if (event.type === "checkout.session.completed") {
     const subscription = await stripe.subscriptions.retrieve(
       session.subscription as string
     )
+    console.log("[POST] Checkout session completed. Subscription:", subscription); // Log subscription
 
     if (!session?.metadata?.userId) {
+      console.log("[POST] User id is required"); // Log user id required
       return new NextResponse("User id is required", { status: 400 });
     }
 
@@ -43,12 +48,14 @@ export async function POST(req: Request) {
         ),
       },
     })
+    console.log("[POST] User subscription created."); // Log user subscription created
   }
 
   if (event.type === "invoice.payment_succeeded") {
     const subscription = await stripe.subscriptions.retrieve(
       session.subscription as string
     )
+    console.log("[POST] Invoice payment succeeded. Subscription:", subscription); // Log subscription
 
     await prismadb.userSubscription.update({
       where: {
@@ -61,7 +68,8 @@ export async function POST(req: Request) {
         ),
       },
     })
+    console.log("[POST] User subscription updated."); // Log user subscription updated
   }
 
   return new NextResponse(null, { status: 200 })
-};
+}

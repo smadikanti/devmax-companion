@@ -5,14 +5,17 @@ import prismadb from "@/lib/prismadb";
 import { stripe } from "@/lib/stripe";
 import { absoluteUrl } from "@/lib/utils";
 
-const settingsUrl = absoluteUrl("/settings");
+const settingsUrl = "http://localhost:3001/settings";
 
 export async function GET() {
   try {
     const { userId } = auth();
+    console.log("[GET] userId:", userId); // Log userId
     const user = await currentUser();
+    console.log("[GET] user:", user); // Log user
 
     if (!userId || !user) {
+      console.log("[GET] Unauthorized"); // Log unauthorized
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -20,15 +23,17 @@ export async function GET() {
       where: {
         userId
       }
-    })
+    });
+    console.log("[GET] userSubscription:", userSubscription); // Log userSubscription
 
     if (userSubscription && userSubscription.stripeCustomerId) {
       const stripeSession = await stripe.billingPortal.sessions.create({
         customer: userSubscription.stripeCustomerId,
         return_url: settingsUrl,
-      })
+      });
+      console.log("[GET] billingPortal session:", stripeSession); // Log billingPortal session
 
-      return new NextResponse(JSON.stringify({ url: stripeSession.url }))
+      return new NextResponse(JSON.stringify({ url: stripeSession.url }));
     }
 
     const stripeSession = await stripe.checkout.sessions.create({
@@ -57,11 +62,12 @@ export async function GET() {
       metadata: {
         userId,
       },
-    })
+    });
+    console.log("[GET] checkout session:", stripeSession); // Log checkout session
 
-    return new NextResponse(JSON.stringify({ url: stripeSession.url }))
+    return new NextResponse(JSON.stringify({ url: stripeSession.url }));
   } catch (error) {
-    console.log("[STRIPE]", error);
+    console.log("[STRIPE]", error); // Log any errors
     return new NextResponse("Internal Error", { status: 500 });
   }
 };
